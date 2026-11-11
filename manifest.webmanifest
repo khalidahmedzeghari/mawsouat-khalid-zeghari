@@ -1,0 +1,10 @@
+{
+  "name": "موسوعة خالد أحمد الزغاري التطواني",
+  "short_name": "الموسوعة",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f7f5ef",
+  "theme_color": "#173d35"
+}
