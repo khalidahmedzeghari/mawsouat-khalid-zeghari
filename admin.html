@@ -32,7 +32,15 @@ button.gold{background:var(--gold)}button.light{background:#e8eee9;color:var(--g
 <h2>دخول المدير</h2><p class="note">الدخول مخصص للحساب الإداري المعتمد.</p>
 <label>البريد الإلكتروني</label><input id="email" type="email" value="khalidzeghari677@gmail.com" autocomplete="username">
 <label>كلمة المرور</label><input id="password" type="password" autocomplete="current-password">
-<div class="actions"><button id="loginBtn" class="gold">دخول</button></div><div id="loginMsg" class="status"></div>
+<div class="actions"><button id="loginBtn" class="gold">دخول</button><button id="forgotBtn" class="light" type="button">نسيت كلمة المرور؟</button></div><div id="loginMsg" class="status"></div>
+</section>
+<section id="resetPanel" class="panel hidden" style="max-width:440px;margin:20px auto">
+<h2>تعيين كلمة مرور جديدة</h2>
+<p class="note">أدخل كلمة مرور جديدة لحسابك الإداري، ثم أكدها.</p>
+<label>كلمة المرور الجديدة</label><input id="newPassword" type="password" minlength="8" autocomplete="new-password">
+<label>تأكيد كلمة المرور</label><input id="confirmPassword" type="password" minlength="8" autocomplete="new-password">
+<div class="actions"><button id="savePassword" class="gold" type="button">حفظ كلمة المرور</button></div>
+<div id="resetMsg" class="status"></div>
 </section>
 <section id="app" class="hidden">
 <div class="panel toolbar"><div><b id="signed"></b><div class="note">مساحة الإدارة الخاصة</div></div><button id="logout" class="light">تسجيل الخروج</button></div>
@@ -69,6 +77,34 @@ function editor(row=null){edit=row;$('formTitle').textContent=row?'تعديل ا
 $('add').onclick=()=>editor();$('cancel').onclick=()=>$('editor').classList.add('hidden');$('search').oninput=render;
 $('form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),p={};for(const [k,l,t] of cfg[tab].fields){if(t==='check')p[k]=e.target.elements[k].checked;else{let v=f.get(k);p[k]=v===''?null:v;if(t==='number'&&v!=='')p[k]=Number(v)}}if(['articles','categories','tags'].includes(tab)&&!p.slug)p.slug=slug(tab==='articles'?p.title:p.name);if(tab==='articles'&&p.status==='published'&&!edit?.published_at)p.published_at=new Date().toISOString();status('formMsg','جارٍ الحفظ…');const r=edit?await db.from(tab).update(p).eq('id',edit.id):await db.from(tab).insert(p);if(r.error){status('formMsg','تعذر الحفظ: '+r.error.message);return}status('formMsg','تم الحفظ.');$('editor').classList.add('hidden');await load();await counts()};
 async function del(id){if(!confirm('هل تريد حذف هذا العنصر؟ لا يمكن التراجع.'))return;const {error}=await db.from(tab).delete().eq('id',id);if(error){alert(error.message);return}await load();await counts()}
+// Password recovery: Supabase emails a one-time recovery link to the account owner.
+$('forgotBtn').onclick=async()=>{
+ const email=$('email').value.trim();
+ if(!email){status('loginMsg','أدخل بريدك الإلكتروني أولاً.');return}
+ status('loginMsg','جارٍ طلب رابط استعادة كلمة المرور…');
+ const redirectTo=window.location.origin+window.location.pathname;
+ const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo});
+ status('loginMsg',error?'تعذر إرسال الرابط: '+error.message:'إذا كان البريد مسجلاً، فستصلك رسالة استعادة. افحص الوارد والرسائل غير المرغوب فيها.');
+};
+// The recovery link returns here with a PASSWORD_RECOVERY auth event.
+db.auth.onAuthStateChange((event,session)=>{
+ if(event==='PASSWORD_RECOVERY' && session){
+  $('login').classList.add('hidden');
+  $('resetPanel').classList.remove('hidden');
+ }
+});
+$('savePassword').onclick=async()=>{
+ const password=$('newPassword').value, confirm=$('confirmPassword').value;
+ if(password.length<8){status('resetMsg','اختر كلمة مرور من 8 أحرف على الأقل.');return}
+ if(password!==confirm){status('resetMsg','كلمتا المرور غير متطابقتين.');return}
+ status('resetMsg','جارٍ تحديث كلمة المرور…');
+ const {error}=await db.auth.updateUser({password});
+ if(error){status('resetMsg','تعذر تحديث كلمة المرور: '+error.message);return}
+ status('resetMsg','تم تحديث كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.');
+ await db.auth.signOut();
+ $('resetPanel').classList.add('hidden');$('login').classList.remove('hidden');
+ $('password').value='';$('newPassword').value='';$('confirmPassword').value='';
+};
 $('loginBtn').onclick=async()=>{status('loginMsg','جارٍ التحقق…');const {error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){status('loginMsg','تعذر الدخول: '+error.message);return}const u=await admin();if(!u){status('loginMsg','هذا الحساب غير مخوّل بالدخول.');return}await enter(u)};
 $('logout').onclick=async()=>{await db.auth.signOut();$('app').classList.add('hidden');$('login').classList.remove('hidden');$('password').value=''};
 const u=await admin();if(u)await enter(u);
