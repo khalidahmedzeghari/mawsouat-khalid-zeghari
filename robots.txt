@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://khalidahmedzeghari.github.io/mawsouat-khalid-zeghari/sitemap.xml
