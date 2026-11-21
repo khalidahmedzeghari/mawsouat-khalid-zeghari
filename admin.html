@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إدارة موسوعة خالد الزغاري</title>
+<style>
+:root{--g:#173d35;--gold:#b9914b;--bg:#f5f4ef;--line:#e5e3da}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#202824;font:16px/1.7 Tahoma,Arial,sans-serif}
+header{background:var(--g);color:white;padding:20px}header div,main{max-width:1050px;margin:auto}
+h1{font-size:21px;margin:0}header p{margin:3px 0;color:#ead8b6;font-size:13px}
+main{padding:22px 14px 50px}.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:15px}
+.hidden{display:none!important}h2{font-size:18px;color:var(--g);margin:0 0 12px}
+label{display:block;font-weight:bold;font-size:13px;margin:9px 0 4px}
+input,textarea,select{width:100%;padding:10px;border:1px solid #d5dbd5;border-radius:8px;font:inherit;background:white}
+textarea{min-height:120px}button{border:0;border-radius:8px;padding:10px 14px;background:var(--g);color:white;font:inherit;cursor:pointer}
+button.gold{background:var(--gold)}button.light{background:#e8eee9;color:var(--g)}button.red{background:#f8e8e6;color:#9a302a}
+.actions,.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tabs{margin:0 0 14px}
+.tabs button{background:#e8eee9;color:var(--g)}.tabs button.active{background:var(--g);color:white}
+.note{font-size:13px;color:#68736d}.status{font-size:13px;margin-top:10px;min-height:22px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:14px}
+.stat{background:white;border:1px solid var(--line);border-radius:10px;padding:12px}.stat b{display:block;font-size:22px;color:var(--g)}
+.toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}.toolbar input{max-width:300px}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:right;padding:10px;border-bottom:1px solid #eee}th{color:#68736d}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.full{grid-column:1/-1}
+@media(max-width:620px){.stats{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<header><div><h1>لوحة إدارة موسوعة خالد الزغاري</h1><p>إدارة المقالات والبحوث والمراجع والبيانات العلمية</p></div></header>
+<main>
+<section id="login" class="panel" style="max-width:440px;margin:35px auto">
+<h2>دخول المدير</h2><p class="note">الدخول مخصص للحساب الإداري المعتمد.</p>
+<label>البريد الإلكتروني</label><input id="email" type="email" value="khalidzeghari677@gmail.com" autocomplete="username">
+<label>كلمة المرور</label><input id="password" type="password" autocomplete="current-password">
+<div class="actions"><button id="loginBtn" class="gold">دخول</button></div><div id="loginMsg" class="status"></div>
+</section>
+<section id="app" class="hidden">
+<div class="panel toolbar"><div><b id="signed"></b><div class="note">مساحة الإدارة الخاصة</div></div><button id="logout" class="light">تسجيل الخروج</button></div>
+<div class="stats"><div class="stat"><b id="c_articles">—</b><span>المقالات والبحوث</span></div><div class="stat"><b id="c_categories">—</b><span>التصنيفات</span></div><div class="stat"><b id="c_authors">—</b><span>الأعلام</span></div><div class="stat"><b id="c_sources">—</b><span>المراجع</span></div></div>
+<div class="panel">
+<nav class="tabs" id="tabs"></nav>
+<div class="toolbar"><h2 id="heading">المقالات والبحوث</h2><input id="search" placeholder="بحث..."><button id="add" class="gold">+ إضافة جديد</button></div>
+<div id="list" class="tablewrap"></div>
+</div>
+<div id="editor" class="panel hidden"><h2 id="formTitle">إضافة عنصر</h2><form id="form"><div id="fields" class="grid"></div><div class="actions"><button class="gold" type="submit">حفظ</button><button class="light" type="button" id="cancel">إلغاء</button></div><div id="formMsg" class="status"></div></form></div>
+</section>
+</main>
+<script type="module">
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
+const db=createClient('https://tqzhzlqqgnlweegkbiwf.supabase.co','sb_publishable_76fjjl81B16KvGPWycpzyQ_ttM06epv');
+const $=x=>document.getElementById(x), esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cfg={
+articles:{title:'المقالات والبحوث',label:'title',fields:[['title','عنوان المقال','text',1],['slug','الرابط المختصر','text',1],['excerpt','ملخص','textarea'],['body_md','المحتوى','textarea'],['content_type','نوع المحتوى','select',[['research','بحث'],['biography','سيرة'],['book','كتاب'],['manuscript','مخطوط'],['literary_text','نص أدبي'],['heritage','تراث'],['other','أخرى']]],['status','الحالة','select',[['draft','مسودة'],['review','قيد المراجعة'],['published','منشور'],['archived','مؤرشف']]],['seo_title','عنوان SEO','text'],['seo_description','وصف SEO','textarea']]},
+categories:{title:'التصنيفات',label:'name',fields:[['name','اسم التصنيف','text',1],['slug','الرابط المختصر','text',1],['description','الوصف','textarea'],['sort_order','ترتيب العرض','number'],['is_active','نشط','check']]},
+authors:{title:'الأعلام والمؤلفون',label:'display_name',fields:[['display_name','الاسم','text',1],['bio','الترجمة أو النبذة','textarea'],['website_url','الموقع','url'],['is_public','ظاهر للعامة','check']]},
+sources:{title:'المصادر والمراجع',label:'title',fields:[['title','عنوان المصدر','text',1],['source_type','نوع المصدر','select',[['book','كتاب'],['article','مقال'],['manuscript','مخطوط'],['website','موقع'],['archive','أرشيف'],['other','أخرى']]],['creator','المؤلف','text'],['editor','المحقق','text'],['publisher','الناشر','text'],['publication_place','مكان النشر','text'],['publication_year','سنة النشر','text'],['volume','المجلد','text'],['pages','الصفحات','text'],['url','الرابط','url'],['citation','صيغة الإحالة','textarea'],['notes','ملاحظات','textarea'],['is_public','ظاهر للعامة','check']]},
+tags:{title:'الكلمات المفتاحية',label:'name',fields:[['name','الكلمة المفتاحية','text',1],['slug','الرابط المختصر','text',1],['is_active','نشطة','check']]}
+};
+let tab='articles',data=[],edit=null;
+function status(id,t){$(id).textContent=t}
+function slug(s){return (s||'').trim().toLowerCase().replace(/[ً-ٰٟـ]/g,'').replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'')}
+function drawTabs(){$('tabs').innerHTML=Object.entries(cfg).map(([k,v])=>`<button data-k="${k}" class="${k===tab?'active':''}">${v.title}</button>`).join('');$('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=b.dataset.k;edit=null;$('editor').classList.add('hidden');drawTabs();load()});$('heading').textContent=cfg[tab].title}
+async function admin(){const {data:{user}}=await db.auth.getUser();if(!user)return null;const {data}=await db.from('admin_users').select('user_id').eq('user_id',user.id).maybeSingle();if(!data){await db.auth.signOut();return null}return user}
+async function enter(u){$('login').classList.add('hidden');$('app').classList.remove('hidden');$('signed').textContent=u.email||'';drawTabs();await load();await counts()}
+async function counts(){for(const t of ['articles','categories','authors','sources']){const {count}=await db.from(t).select('*',{count:'exact',head:true});$('c_'+t).textContent=count??'—'}}
+async function load(){status('list','جارٍ التحميل…');const {data:d,error}=await db.from(tab).select('*').order('created_at',{ascending:false});if(error){status('list','خطأ: '+error.message);return}data=d||[];render()}
+function render(){const q=$('search').value.toLowerCase();const c=cfg[tab],a=data.filter(x=>JSON.stringify(x).toLowerCase().includes(q));if(!a.length){$('list').innerHTML='<p class="note">لا توجد عناصر. استخدم «إضافة جديد» للبدء.</p>';return}$('list').innerHTML='<table><thead><tr><th>الاسم / العنوان</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>'+a.map(x=>`<tr><td><b>${esc(x[c.label])}</b><br><small>${esc(x.slug||x.source_type||'')}</small></td><td>${esc(x.status||((x.is_active===false||x.is_public===false)?'غير ظاهر':'نشط'))}</td><td><button class="light" data-edit="${x.id}">تعديل</button> <button class="red" data-del="${x.id}">حذف</button></td></tr>`).join('')+'</tbody></table>';$('list').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editor(data.find(x=>x.id===b.dataset.edit)));$('list').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>del(b.dataset.del))}
+function editor(row=null){edit=row;$('formTitle').textContent=row?'تعديل العنصر':'إضافة '+cfg[tab].title;$('fields').innerHTML=cfg[tab].fields.map(([k,l,t,opt])=>{let v=row?.[k]??'';if(t==='textarea')return `<div class="full"><label>${l}</label><textarea name="${k}">${esc(v)}</textarea></div>`;if(t==='check')return `<div><label><input style="width:auto" type="checkbox" name="${k}" ${row?(v?'checked':''):'checked'}> ${l}</label></div>`;if(t==='select')return `<div><label>${l}</label><select name="${k}">${opt.map(([a,b])=>`<option value="${a}" ${v===a?'selected':''}>${b}</option>`).join('')}</select></div>`;return `<div><label>${l}</label><input name="${k}" type="${t}" value="${esc(v)}" ${opt===1?'required':''}></div>`}).join('');$('editor').classList.remove('hidden');status('formMsg','');$('editor').scrollIntoView({behavior:'smooth'})}
+$('add').onclick=()=>editor();$('cancel').onclick=()=>$('editor').classList.add('hidden');$('search').oninput=render;
+$('form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),p={};for(const [k,l,t] of cfg[tab].fields){if(t==='check')p[k]=e.target.elements[k].checked;else{let v=f.get(k);p[k]=v===''?null:v;if(t==='number'&&v!=='')p[k]=Number(v)}}if(['articles','categories','tags'].includes(tab)&&!p.slug)p.slug=slug(tab==='articles'?p.title:p.name);if(tab==='articles'&&p.status==='published'&&!edit?.published_at)p.published_at=new Date().toISOString();status('formMsg','جارٍ الحفظ…');const r=edit?await db.from(tab).update(p).eq('id',edit.id):await db.from(tab).insert(p);if(r.error){status('formMsg','تعذر الحفظ: '+r.error.message);return}status('formMsg','تم الحفظ.');$('editor').classList.add('hidden');await load();await counts()};
+async function del(id){if(!confirm('هل تريد حذف هذا العنصر؟ لا يمكن التراجع.'))return;const {error}=await db.from(tab).delete().eq('id',id);if(error){alert(error.message);return}await load();await counts()}
+$('loginBtn').onclick=async()=>{status('loginMsg','جارٍ التحقق…');const {error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){status('loginMsg','تعذر الدخول: '+error.message);return}const u=await admin();if(!u){status('loginMsg','هذا الحساب غير مخوّل بالدخول.');return}await enter(u)};
+$('logout').onclick=async()=>{await db.auth.signOut();$('app').classList.add('hidden');$('login').classList.remove('hidden');$('password').value=''};
+const u=await admin();if(u)await enter(u);
+</script>
+</body></html>
